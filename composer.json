@@ -1,0 +1,20 @@
+{
+    "name": "accela-framework/accela",
+    "description": "PHP Web Framwork for SPA",
+    "keywords": ["SPA", "php framework"],
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/accela-framework/accela",
+    "authors": [
+        {
+            "name": "green spot",
+            "email": "in.green.spot@gmail.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Accela\\": "src/includes/"
+        }
+    }
+}

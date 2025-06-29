@@ -1,0 +1,23 @@
+#!/usr/bin/env php
+<?php
+
+namespace Accela;
+
+if(php_sapi_name() !== "cli") exit;
+
+if(file_exists(__DIR__ . "/../../env.php")){
+  require_once __DIR__ . "/../../env.php";
+}
+
+require_once __DIR__ . "/../../vendor/autoload.php";
+require_once __DIR__ . "/../page-init.php";
+
+define("ROOT_DIR", __DIR__ . "/../..");
+define("APP_DIR", ROOT_DIR . "/app");
+
+if(!file_exists(ROOT_DIR . "/index.php") || !file_exists(APP_DIR . "/page-init.php")){
+  echo "error";
+  exit;
+}
+
+StaticSiteGenerator::output();
