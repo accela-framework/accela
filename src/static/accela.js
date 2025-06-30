@@ -422,6 +422,8 @@
       setTimeout(() => location.hash = hash, 100);
     };
 
+    const site = {};
+
     try {
       const firstPage = new Page(ACCELA.entrancePage);
       firstPage.content.applyComponents(components);
@@ -429,7 +431,6 @@
       movePage(firstPage, location.hash, true);
 
       const res = await fetch(`/assets/site.json?__t=${ACCELA.utime}`);
-      const site = {};
 
       Object.entries(await res.json()).forEach(([path, _page]) => {
         const page = new Page(_page);
