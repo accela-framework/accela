@@ -51,6 +51,8 @@ class API {
   }
 
   public static function responseHeader(string $path): void {
+    if(php_sapi_name() === "cli") return;
+
     preg_match('/\.(.*?)$/', $path, $m);
     if(!$m) return;
 

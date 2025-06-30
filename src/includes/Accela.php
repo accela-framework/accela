@@ -22,10 +22,13 @@ class Accela {
     self::addPlugin("accela", dirname(__DIR__));
 
     if($path === "/assets/site.json"){
-      if(defined("SERVER_LOAD_INTERVAL")){
-        header("Cache-Control: max-age=" . constant("SERVER_LOAD_INTERVAL"));
+      if(php_sapi_name() !== "cli"){
+        if(defined("SERVER_LOAD_INTERVAL")){
+          header("Cache-Control: max-age=" . constant("SERVER_LOAD_INTERVAL"));
+        }
+        header("Content-Type: application/json");
       }
-      header("Content-Type: application/json");
+
       $pages = array_map(function($page){
         return [
           "path" => $page->path,
@@ -39,10 +42,13 @@ class Accela {
     }
 
     if($path === "/assets/js/accela.js"){
-      if(defined("SERVER_LOAD_INTERVAL")){
-        header("Cache-Control: max-age=" . constant("SERVER_LOAD_INTERVAL"));
+      if(php_sapi_name() !== "cli"){
+        if(defined("SERVER_LOAD_INTERVAL")){
+          header("Cache-Control: max-age=" . constant("SERVER_LOAD_INTERVAL"));
+        }
+        header("Content-Type: text/javascript");
       }
-      header("Content-Type: text/javascript");
+
       echo file_get_contents(__DIR__ . "/../static/modules.js");
       foreach(self::$pluginModulePaths as $path){
         $path = rtrim($path, "/") . "/script.js";
