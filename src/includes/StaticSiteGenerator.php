@@ -42,7 +42,9 @@ class StaticSiteGenerator {
       self::getPage("/api/{$path}", $file_path);
     }
 
-    self::getPage("/sitemap.xml", "{$dir}/sitemap.xml");
+    foreach(Accela::$ssg_routes as $path){
+      self::getPage($path, "{$dir}{$path}");
+    }
 
     if(!file_exists("{$dir}/assets/js")) mkdir("{$dir}/assets/js", 0755, true);
     self::getPage("/assets/site.json", "{$dir}/assets/site.json");

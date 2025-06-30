@@ -14,7 +14,8 @@ set_exception_handler(function ($e) {
 
 class Accela {
   static private array $pluginModulePaths = [];
-  static private array $routes = [];
+  static private array $routes = ["GET" => [], "POST" => []];
+  static public array $ssg_routes = [];
 
   public static function route(string $path): void {
     self::addPlugin("app", APP_DIR);
@@ -51,7 +52,8 @@ class Accela {
       return;
     }
 
-    foreach(self::$routes as $_path => $callback){
+    $routes = el(self::$routes, el($_SERVER, "REQUEST_METHOD", "GET"));
+    foreach($routes as $_path => $callback){
       if($path === $_path){
         $callback();
         return;
@@ -103,8 +105,10 @@ class Accela {
     PagePaths::register($path, $getter);
   }
 
-  public static function addRoute(string $path, callable $callback){
-    self::$routes[$path] = $callback;
+  public static function addRoute(string $method, string $path, callable $callback, $ssg_route=false){
+    $method = strtoupper($method);
+    self::$routes[$method][$path] = $callback;
+    if($method === "GET" && $ssg_route) self::$ssg_routes[] = $path;
   }
 
   public static function addPlugin(string $name, string $path){
