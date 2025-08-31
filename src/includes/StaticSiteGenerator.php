@@ -21,7 +21,7 @@ class StaticSiteGenerator {
 
     $root = ROOT_DIR;
     if(file_exists("{$root}/assets")){
-      shell_exec("cp -r {$root}/assets {$dir}/assets");
+      shell_exec("cp -r \"{$root}/assets\" \"{$dir}/assets\"");
     }
     self::$time = time();
 
