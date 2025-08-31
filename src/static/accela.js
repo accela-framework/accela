@@ -419,7 +419,8 @@
         ACCELA.movePage ? ACCELA.movePage(pageContent, move) : move();
         afterMovePage();
       }
-      setTimeout(() => location.hash = hash, 100);
+
+      ACCELA.changeHash ? ACCELA.changeHash(hash) : setTimeout(() => location.hash = hash, 100);
     };
 
     const site = {};
@@ -455,7 +456,7 @@
 
       e.preventDefault();
       if(path === location.pathname){
-        location.hash = url.hash;
+        ACCELA.changeHash ? ACCELA.changeHash(url.hash) : () => location.hash = url.hash;
         return false;
       }
 
