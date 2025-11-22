@@ -4,6 +4,5 @@ https://accela.in-green-spot.com
 
 ## build env
 ```
-$ composer require accela-framework/accela
-$ cp -r vendor/accela-framework/accela/accela/. ./
+$ composer create-project accela-framwork/skeleton .
 ```
