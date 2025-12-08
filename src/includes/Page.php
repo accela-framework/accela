@@ -109,7 +109,7 @@ class Page {
       }
 
       $component = $this->accela->serverComponentManager->loadServerComponent($domain, $componentName);
-      $evaluated_component = $component ? $component->evaluate($props, $content) : "";
+      $evaluated_component = $component ? $component->evaluate($props, $content, $this->accela) : "";
       $html = str_replace($tag, $evaluated_component, $html);
     }
 

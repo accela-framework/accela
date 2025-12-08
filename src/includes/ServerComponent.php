@@ -9,10 +9,10 @@ class ServerComponent {
     $this->filePath = $filePath;
   }
 
-  public function evaluate(array $props, string $content): string {
+  public function evaluate(array $props, string $content, Accela $accela): string {
     $sc = $this;
 
-    return capture(function()use($sc, $props, $content): void {
+    return capture(function()use($sc, $props, $content, $accela): void {
       include $sc->filePath;
     });
   }
