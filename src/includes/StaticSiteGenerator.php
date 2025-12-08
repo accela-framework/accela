@@ -11,7 +11,7 @@ class StaticSiteGenerator {
   ){}
 
   public function output(array $config): void {
-    $indexDir = rtrim($config["indexDir"] ?? $this->accela->getFilePath("/.."), "/");
+    $indexDir = rtrim($config["indexDir"] ?? $this->accela->getFilePath("/../.."), "/");
     $outputDir = rtrim($config["outputDir"] ?? "out", "/");
     $outputDir = $indexDir . "/" . $outputDir;
     $includeFiles = array_map(function($f){return rtrim($f, "/");}, $config["includeFiles"] ?? []);
