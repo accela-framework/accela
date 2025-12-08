@@ -6,25 +6,64 @@ use Exception;
 
 require_once __DIR__ . "/functions.php";
 
-
+/*
 set_exception_handler(function ($e) {
   require __DIR__ . "/../views/error.php";
   exit(1);
 });
+*/
 
 class Accela {
-  static private array $pluginModulePaths = [];
-  static private array $routes = ["GET" => [], "POST" => []];
-  static public array $ssg_routes = [];
+  private string $appDir;
+  public string $url;
+  public string $lang;
+  private ?int $serverLoadInterval = null;
+  private array $plugins;
+  public StaticSiteGenerator $staticSiteGenerator;
+  public PageProps $pageProps;
+  public PagePaths $pagePaths;
+  public PageManager $pageManager;
+  public ComponentManager $componentManager;
+  public ServerComponentManager $serverComponentManager;
+  public OutputGenerator $outputGenerator;
+  public API $api;
+  public Hook $hook;
+  private array $routes = ["GET" => [], "POST" => []];
+  public array $ssgRoutes = [];
+  private static array $pluginPaths = [];
 
-  public static function route(string $path): void {
-    self::addPlugin("app", APP_DIR);
-    self::addPlugin("accela", dirname(__DIR__));
+  public function __construct(array $config){
+    $this->appDir = rtrim($config["appDir"], "/");
+    $this->url = $config["url"] ?? "";
+    $this->lang = $config["lang"] ?? "";
+    $this->serverLoadInterval = $config["serverLoadInterval"] ?? null;
+    $this->plugins = $config["plugins"] ?? [];
+
+    $this->staticSiteGenerator = new StaticSiteGenerator($this);
+    $this->pageProps = new PageProps($this);
+    $this->pagePaths = new PagePaths($this);
+    $this->pageManager = new PageManager($this);
+    $this->componentManager = new ComponentManager($this);
+    $this->serverComponentManager = new ServerComponentManager($this);
+    $this->outputGenerator = new outputGenerator($this);
+    $this->api = new API();
+    $this->hook = new Hook();
+  }
+
+  public function route(string $path): void {
+    $this->usePlugin("app", $this->appDir);
+    $this->usePlugin("accela", dirname(__DIR__));
+
+    foreach($this->plugins as $pluginName => $args){
+      if(self::$pluginPaths[$pluginName]){
+        $this->usePlugin($pluginName, self::$pluginPaths[$pluginName], $args);
+      }
+    }
 
     if($path === "/assets/site.json"){
       if(php_sapi_name() !== "cli"){
-        if(defined("SERVER_LOAD_INTERVAL")){
-          header("Cache-Control: max-age=" . constant("SERVER_LOAD_INTERVAL"));
+        if($this->serverLoadInterval){
+          header("Cache-Control: max-age=" . $this->serverLoadInterval);
         }
         header("Content-Type: application/json");
       }
@@ -36,29 +75,32 @@ class Accela {
           "content" => $page->body,
           "props" => $page->props
         ];
-      }, Page::all());
+      }, $this->pageManager->all());
       echo json_encode($pages);
       return;
     }
 
     if($path === "/assets/js/accela.js"){
       if(php_sapi_name() !== "cli"){
-        if(defined("SERVER_LOAD_INTERVAL")){
-          header("Cache-Control: max-age=" . constant("SERVER_LOAD_INTERVAL"));
+        if($this->serverLoadInterval){
+          header("Cache-Control: max-age=" . $this->serverLoadInterval);
         }
         header("Content-Type: text/javascript");
       }
 
       echo file_get_contents(__DIR__ . "/../static/modules.js");
-      foreach(self::$pluginModulePaths as $path){
-        $path = rtrim($path, "/") . "/script.js";
-        if(file_exists($path)) echo file_get_contents($path);
+      echo file_get_contents($this->appDir . "/script.js");
+      foreach($this->plugins as $pluginName => $args){
+        if(isset(self::$pluginPaths[$pluginName])){
+          $scriptPath = rtrim(self::$pluginPaths[$pluginName], "/") . "/script.js";
+          if(file_exists($scriptPath)) echo file_get_contents($scriptPath);
+        }
       }
       echo file_get_contents(__DIR__ . "/../static/accela.js");
       return;
     }
 
-    $routes = el(self::$routes, el($_SERVER, "REQUEST_METHOD", "GET"));
+    $routes = el($this->routes, el($_SERVER, "REQUEST_METHOD", "GET"));
     foreach($routes as $_path => $callback){
       if($path === $_path){
         $callback();
@@ -67,63 +109,87 @@ class Accela {
     }
 
     if(preg_match("@/api/(.+)$@", $path, $m)){
-      if(API::route($m[1])) return;
+      if($this->api->route($m[1])) return;
     }
 
-    // $path_info = el($_SERVER, "PATH_INFO", "/");
     $paths = explode("/", $path);
     $paths = array_map(function($path){
       return strtolower(urlencode($path));
     }, $paths);
-    $path_info = implode("/", $paths);
+    $pathInfo = implode("/", $paths);
 
     try{
-      $page = new Page($path_info);
+      $page = $this->pageManager->getPage($pathInfo);
     }catch(PageNotFoundError $e){
-      $page = new Page("/404");
+      $page = $this->pageManager->getNotFoundPage();
       http_response_code(404);
     }
 
-    require __DIR__ . "/../views/template.php";
+    $this->loadTemplate($page);
   }
 
-  public static function api(string $path, callable $callback): void {
-    API::register($path, $callback);
+  public function loadTemplate($page){
+    $accela = $this;
+    include __DIR__ . "/../views/template.php";
   }
 
-  public static function apiPaths(string $dynamic_path, callable $get_paths): void {
-    API::registerPaths($dynamic_path, $get_paths);
+  public function api(string $path, callable $callback): void {
+    $this->api->register($path, $callback);
   }
 
-  public static function globalProps(callable $getter): void {
-    PageProps::registerGlobal($getter);
+  public function apiPaths(string $dynamic_path, callable $get_paths): void {
+    $this->api->registerPaths($dynamic_path, $get_paths);
   }
 
-  public static function getGlobalProp(string $key): mixed {
-    return PageProps::$global_props[$key];
+  public function globalProps(callable $getter): void {
+    $this->pageProps->registerGlobal($getter);
   }
 
-  public static function pageProps(string $path, callable $getter): void {
-    PageProps::register($path, $getter);
+  public function getGlobalProp(string $key): mixed {
+    return $this->pageProps->globalProps[$key];
   }
 
-  public static function pagePaths(string $path, callable $getter): void {
-    PagePaths::register($path, $getter);
+  public function pageProps(string $path, callable $getter): void {
+    $this->pageProps->register($path, $getter);
   }
 
-  public static function addRoute(string $method, string $path, callable $callback, $ssg_route=false){
+  public function pagePaths(string $path, callable $getter): void {
+    $this->pagePaths->register($path, $getter);
+  }
+
+  public function addRoute(string $method, string $path, callable $callback, $ssg_route=false){
     $method = strtoupper($method);
-    self::$routes[$method][$path] = $callback;
-    if($method === "GET" && $ssg_route) self::$ssg_routes[] = $path;
+    $this->routes[$method][$path] = $callback;
+    if($method === "GET" && $ssg_route) $this->ssgRoutes[] = $path;
   }
 
-  public static function addPlugin(string $name, string $path){
-    Component::registerDomain($name, rtrim($path, "/") . "/components");
-    ServerComponent::registerDomain($name, rtrim($path, "/") . "/server-components");
-    self::$pluginModulePaths[] = $path;
+  public function usePlugin(string $name, string $path, mixed $args=null){
+    $this->componentManager->registerDomain($name, rtrim($path, "/") . "/components");
+    $this->serverComponentManager->registerDomain($name, rtrim($path, "/") . "/server-components");
 
-    if(file_exists(rtrim($path, "/") . "/page-init.php")){
-      require_once rtrim($path, "/") . "/page-init.php";
+    if(file_exists(rtrim($path, "/") . "/plugin.php")){
+      $pluginCallback = include rtrim($path, "/") . "/plugin.php";
+      $pluginCallback($this, $args);
     }
+  }
+
+  function addHook(string $name, callable $callback): void {
+    $this->hook->add($name, $callback);
+  }
+
+  public function getFilePath(string $path){
+    return $this->appDir . "/" . ltrim($path, "/");
+  }
+
+  public function getUtime(): string {
+    $now = time();
+    $interval = $this->serverLoadInterval;
+    if($interval) $now = $now - ($now % $interval);
+
+    return el($_GET, "__t", "{$now}");
+  }
+
+  public static function registerPlugin(string $name, string $path){
+    self::$pluginPaths[$name] = $path;
   }
 }

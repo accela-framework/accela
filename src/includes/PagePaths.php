@@ -5,19 +5,23 @@ namespace Accela;
 class NoPagePathsError extends \Exception {}
 
 class PagePaths {
-  public static array $getters = [];
-  public static array $memo = [];
+  public array $getters = [];
+  public array $memo = [];
 
-  public static function get(string $path): mixed {
+  public function __construct(
+    private Accela $accela
+  ){}
+
+  public function get(string $path): mixed {
     if(!isset($memo[$path])){
-      if(!el(self::$getters, $path)) throw new NoPagePathsError($path);
-      $memo[$path] = call_user_func(self::$getters[$path]);
+      if(!el($this->getters, $path)) throw new NoPagePathsError($path);
+      $memo[$path] = call_user_func($this->getters[$path]);
     }
 
     return $memo[$path];
   }
 
-  public static function register(string $path, callable $getter): void {
-    self::$getters[$path] = $getter;
+  public function register(string $path, callable $getter): void {
+    $this->getters[$path] = $getter;
   }
 }

@@ -243,6 +243,7 @@
           componentObject.querySelectorAll(`[data-contents="${componentName}"]`).forEach(_o => {
             _o.innerHTML = content.innerHTML;
           });
+
           utils.applyComponents(componentObject, components, props, depth+1);
           content.parentNode.replaceChild(componentObject.firstElementChild, content);
 
@@ -425,7 +426,7 @@
 
     const site = {};
 
-    try {
+//    try {
       const firstPage = new Page(ACCELA.entrancePage);
       firstPage.content.applyComponents(components);
 
@@ -438,10 +439,10 @@
         page.content.applyComponents(components);
         site[path] = page;
       });
-    }catch(error){
-      viewError(error);
-      return;
-    }
+//    }catch(error){
+//      viewError(error);
+//      return;
+//    }
 
     document.querySelector("body").addEventListener("click", e => {
       let target = e.target;

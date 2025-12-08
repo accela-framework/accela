@@ -1,6 +1,14 @@
 <?php
-$dir = rtrim(APP_DIR, "/") . "/" . rtrim($props["relpath"], "/");
+use Accela\Accela;
+
+/**
+ * @var Accela $accela
+ * @var array $props
+ */
+
+$dir = $accela->getFilePath($props["relpath"]);
 $csss = array_filter(array_map("trim", explode("\n", $content)));
+
 foreach($csss as $fname){
   $path = $dir . $fname;
   if(file_exists($path)){

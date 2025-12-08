@@ -4,65 +4,73 @@ namespace Accela;
 require_once __DIR__ . "/functions.php";
 
 class StaticSiteGenerator {
-  private static int $time;
+  private int $time;
 
-  public static function output(): void {
-    $dir = ROOT_DIR . "/out";
+  public function __construct(
+    private Accela $accela
+  ){}
 
-    if(is_file($dir)){
+  public function output(array $config): void {
+    $indexDir = rtrim($config["indexDir"] ?? $this->accela->getFilePath("/.."), "/");
+    $outputDir = rtrim($config["outputDir"] ?? "out", "/");
+    $outputDir = $indexDir . "/" . $outputDir;
+    $includeFiles = array_map(function($f){return rtrim($f, "/");}, $config["includeFiles"] ?? []);
+
+    if(is_file($outputDir)){
       throw new \Exception("ディレクトリが作成できません。");
 
-    }else if(file_exists($dir)){
-      self::clearDir($dir);
+    }else if(file_exists($outputDir)){
+      self::clearDir($outputDir);
 
     }else{
-      mkdir($dir);
+      mkdir($outputDir);
     }
 
-    $root = ROOT_DIR;
-    if(file_exists("{$root}/assets")){
-      shell_exec("cp -r \"{$root}/assets\" \"{$dir}/assets\"");
+    foreach($includeFiles as $includeFile){
+      if(file_exists($includeFile)){
+        shell_exec("cp -r \"{$indexDir}/{$includeFile}\" \"{$outputDir}/{$includeFile}\"");
+      }
     }
-    self::$time = time();
+    $this->time = time();
 
-    foreach(Page::getAllTemplatePaths() as $path){
+    foreach($this->accela->pageManager->getAllTemplatePaths() as $path){
       if(isDynamicPath($path)){
-        foreach(PagePaths::get($path) as $_path){
-          $file_path = "{$dir}{$_path}" . (preg_match("@.*/$@", $_path) ? "index.html" : ".html");
-          self::getPage($_path, $file_path);
+        foreach($this->accela->pagePaths->get($path) as $_path){
+          $filePath = "{$outputDir}{$_path}" . (preg_match("@.*/$@", $_path) ? "index.html" : ".html");
+          $this->getPage($_path, $filePath);
         }
       }else{
-        $file_path = "{$dir}{$path}" . (preg_match("@.*/$@", $path) ? "index.html" : ".html");
-        self::getPage($path, $file_path);
+        $filePath = "{$outputDir}{$path}" . (preg_match("@.*/$@", $path) ? "index.html" : ".html");
+        $this->getPage($path, $filePath);
       }
     }
 
-    foreach(API::getAllPaths() as $path){
-      $file_path = "{$dir}/api/{$path}";
-      self::getPage("/api/{$path}", $file_path);
+    foreach($this->accela->api->getAllPaths() as $path){
+      $filePath = "{$outputDir}/api/{$path}";
+      $this->getPage("/api/{$path}", $filePath);
     }
 
-    foreach(Accela::$ssg_routes as $path){
-      self::getPage($path, "{$dir}{$path}");
+    foreach($this->accela->ssgRoutes as $path){
+      $this->getPage($path, "{$outputDir}{$path}");
     }
 
-    if(!file_exists("{$dir}/assets/js")) mkdir("{$dir}/assets/js", 0755, true);
-    self::getPage("/assets/site.json", "{$dir}/assets/site.json");
-    self::getPage("/assets/js/accela.js", "{$dir}/assets/js/accela.js");
-    file_put_contents("{$dir}/.htaccess", self::htaccess());
+    if(!file_exists("{$outputDir}/assets/js")) mkdir("{$outputDir}/assets/js", 0755, true);
+    $this->getPage("/assets/site.json", "{$outputDir}/assets/site.json");
+    $this->getPage("/assets/js/accela.js", "{$outputDir}/assets/js/accela.js");
+    file_put_contents("{$outputDir}/.htaccess", self::htaccess());
   }
 
-  private static function getPage(string $path, string $file_path): void {
-    $dir_path = dirname($file_path);
+  private function getPage(string $path, string $filePath): void {
+    $dir_path = dirname($filePath);
     if(!is_dir($dir_path)) mkdir($dir_path, 0755, true);
 
     ob_start();
-    Accela::route($path);
-    file_put_contents($file_path, ob_get_contents());
+    $this->accela->route($path);
+    file_put_contents($filePath, ob_get_contents());
     ob_end_clean();
   }
 
-  private static function clearDir(string $dir): bool {
+  private function clearDir(string $dir): bool {
     $result = true;
 
     $iter = new \RecursiveIteratorIterator(
@@ -81,7 +89,7 @@ class StaticSiteGenerator {
     return !!$result;
   }
 
-  private static function htaccess(): string {
+  private function htaccess(): string {
     return <<<S
 RewriteEngine on
 RewriteCond %{THE_REQUEST} ^.*/index.html

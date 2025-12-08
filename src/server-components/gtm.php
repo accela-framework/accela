@@ -4,7 +4,7 @@ use function Accela\el;
 
 $id = el($props, "id");
 
-Accela\addHook("body-start", function()use($id){
+$accela->addHook("body-start", function()use($id){
   echo "<noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id={$id}\" height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>";
 });
 ?>

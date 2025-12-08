@@ -3,19 +3,19 @@
 namespace Accela;
 
 class Hook {
-  public static $hooks = [];
+  public $hooks = [];
 
-  public static function add(string $name, callable $callback): void {
-    if(el(self::$hooks, $name)) $hooks[$name] = [];
-    self::$hooks[$name][] = $callback;
+  public function add(string $name, callable $callback): void {
+    if(el($this->hooks, $name)) $hooks[$name] = [];
+    $this->hooks[$name][] = $callback;
   }
 
-  public static function get($name): array {
-    return el(self::$hooks, $name, []);
+  public function get($name): array {
+    return el($this->hooks, $name, []);
   }
 
-  public static function exec($name, ...$args){
-    foreach(self::get($name) as $hook){
+  public function exec($name, ...$args){
+    foreach($this->get($name) as $hook){
       $hook(...$args);
     }
   }

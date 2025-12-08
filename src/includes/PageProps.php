@@ -3,19 +3,23 @@
 namespace Accela;
 
 class PageProps {
-  public static array $props = [];
-  public static array | null $global_props = null;
+  public array $props = [];
+  public array | null $globalProps = null;
 
-  public static function get(string $path, $query=null): mixed {
-    if(!el(self::$props, $path)) return [];
-    return $query ? call_user_func_array(self::$props[$path], [$query]) : call_user_func(self::$props[$path]);
+  public function __construct(
+    private Accela $accela
+  ){}
+
+  public function get(string $path, $query=null): mixed {
+    if(!el($this->props, $path)) return [];
+    return $query ? call_user_func_array($this->props[$path], [$query]) : call_user_func($this->props[$path]);
   }
 
-  public static function register(string $path, callable $getter): void {
-    self::$props[$path] = $getter;
+  public function register(string $path, callable $getter): void {
+    $this->props[$path] = $getter;
   }
 
-  public static function registerGlobal(callable $getter): void {
-    self::$global_props = $getter();
+  public function registerGlobal(callable $getter): void {
+    $this->globalProps = $getter();
   }
 }

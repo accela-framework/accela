@@ -42,7 +42,7 @@ ACCELA.serverError = new NoPagePathsError();
   class ServerComponentDomainNotFoundError extends ServerError {
   constructor() {
     super();
-    this.domainName = '<?php echo $e->domain_name; ?>';
+    this.domainName = '<?php echo $e->domainName; ?>';
     this.references = [
       ["プラグイン", "https://accela.in-green-spot.com/document/plugins/"],
       ["サーバコンポーネント", "https://accela.in-green-spot.com/document/server-components/"]
@@ -55,7 +55,7 @@ ACCELA.serverError = new ServerComponentDomainNotFoundError();
   class ServerComponentNotFoundError extends ServerError {
   constructor() {
     super();
-    this.componentName = '<?php echo $e->component_name; ?>';
+    this.componentName = '<?php echo $e->componentName; ?>';
     this.references = [
       ["サーバコンポーネント", "https://accela.in-green-spot.com/document/server-components/"]
     ];
@@ -67,6 +67,6 @@ ACCELA.serverError = new ServerComponentNotFoundError();
 ACCELA.serverError = new ServerError();
 <?php endswitch; ?>
 </script>
-<script src="/assets/js/accela.js?__t=<?php echo getUtime(); ?>" type="module"></script>
+<script src="/assets/js/accela.js?__t=<?php echo $accela->getUtime(); ?>" type="module"></script>
 </body>
 </html>
