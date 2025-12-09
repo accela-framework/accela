@@ -4,5 +4,5 @@ https://accela.in-green-spot.com
 
 ## build env
 ```
-$ composer create-project accela-framwork/skeleton .
+$ composer create-project accela-framework/skeleton .
 ```
