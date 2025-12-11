@@ -208,11 +208,17 @@
         });
 
         content.querySelectorAll("[data-bind-html]").forEach(o => {
-          o.innerHTML = props[o.getAttribute("data-bind-html")];
+          const variable = o.getAttribute("data-bind-html");
+          let html = props[variable];
+          if(typeof html === "undefined") html = ACCELA.globalProps[variable]
+          o.innerHTML = html;
         });
 
         content.querySelectorAll("[data-bind-text]").forEach(o => {
-          o.textContent = props[o.getAttribute("data-bind-text")];
+          const variable = o.getAttribute("data-bind-text");
+          let text = props[variable];
+          if(typeof text === "undefined") text = ACCELA.globalProps[variable]
+          o.textContent = text;
         });
       },
 
