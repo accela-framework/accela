@@ -6,12 +6,10 @@ use Exception;
 
 require_once __DIR__ . "/functions.php";
 
-/*
 set_exception_handler(function ($e) {
   require __DIR__ . "/../views/error.php";
   exit(1);
 });
-*/
 
 class Accela {
   private string $appDir;
@@ -30,6 +28,7 @@ class Accela {
   public Hook $hook;
   private array $routes = ["GET" => [], "POST" => []];
   public array $ssgRoutes = [];
+  private array $globalData = [];
   private static array $pluginPaths = [];
 
   public function __construct(array $config){
@@ -187,6 +186,14 @@ class Accela {
     if($interval) $now = $now - ($now % $interval);
 
     return el($_GET, "__t", "{$now}");
+  }
+
+  public function setData(string $key, mixed $value): void {
+    $this->globalData[$key] = $value;
+  }
+
+  public function getData(string $key): mixed {
+    return $this->globalData[$key] ?? null;
   }
 
   public static function registerPlugin(string $name, string $path){
