@@ -231,8 +231,8 @@
           content.getAttributeNames().forEach(propName => {
             const prop = content.getAttribute(propName);
             if(propName[0] === "@" && _props[prop]){
-              props[propName.slice[1]] = _props[propName];
-            }else{
+              props[propName.slice(1)] = _props[prop];
+            }else if(propName !== "use"){
               props[propName] = content.getAttribute(propName);
             }
           });
