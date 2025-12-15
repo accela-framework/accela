@@ -467,26 +467,31 @@
         return false;
       }
 
+      const prevLocation = {href: location.href, pathname: location.pathname, search: location.search};
+      history.pushState({prev: prevLocation}, null, path + url.search);
+      location.prev = prevLocation;
       movePage(site[path], url.hash);
-      history.pushState(null, null, path + url.search);
 
       return false;
     });
 
-    window.onpopstate = (e) => {
+    window.addEventListener("popstate", (e) => {
       if(e.originalEvent && !e.originalEvent.state) return;
 
       try{
+        location.prev = e.state?.prev;
         movePage(site[location.pathname], location.hash);
       }catch(error){
         viewError(error);
       }
-    };
+    });
 
     ACCELA._movePage = (path) => {
       try{
+        const prevLocation = {href: location.href, pathname: location.pathname, search: location.search};
+        history.pushState({prev: prevLocation}, null, path + url.search);
+        location.prev = prevLocation;
         movePage(site[path], "");
-        history.pushState(null, null, path + url.search);
       }catch(error){
         viewError(error);
       }
