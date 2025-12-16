@@ -44,7 +44,7 @@ class Accela {
     $this->pageManager = new PageManager($this);
     $this->componentManager = new ComponentManager($this);
     $this->serverComponentManager = new ServerComponentManager($this);
-    $this->outputGenerator = new outputGenerator($this);
+    $this->outputGenerator = new OutputGenerator($this);
     $this->api = new API();
     $this->hook = new Hook();
   }
