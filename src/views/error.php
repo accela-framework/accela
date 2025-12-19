@@ -67,6 +67,6 @@ ACCELA.serverError = new ServerComponentNotFoundError();
 ACCELA.serverError = new ServerError();
 <?php endswitch; ?>
 </script>
-<script src="/assets/js/accela.js?__t=<?php echo $accela->getUtime(); ?>" type="module"></script>
+<script src="/assets/js/accela.js?__t=<?php echo isset($accela) ? $accela->getUtime() : time(); ?>" type="module"></script>
 </body>
 </html>
