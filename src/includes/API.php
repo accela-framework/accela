@@ -62,7 +62,7 @@ class API {
       "html" => "text/html"
     ];
 
-    $mime = el($mimes, $m[1], "text/plain");
+    $mime = $mimes[$m[1]] ?? "text/plain";
     header("Content-Type: {$mime}");
   }
 

@@ -94,7 +94,7 @@ class Page {
       $props = [];
       foreach($m2[1] as $j => $key){
         if(strpos($key, "@") === 0){
-          $props[substr($key, 1)] = el($page_props, $m2[2][$j]);
+          $props[substr($key, 1)] = $page_props[$m2[2][$j]] ?? null;
         }else{
           $props[$key] = $m2[2][$j];
         }

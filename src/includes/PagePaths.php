@@ -14,7 +14,7 @@ class PagePaths {
 
   public function get(string $path): mixed {
     if(!isset($memo[$path])){
-      if(!el($this->getters, $path)) throw new NoPagePathsError($path);
+      if(!isset($this->getters[$path])) throw new NoPagePathsError($path);
       $memo[$path] = call_user_func($this->getters[$path]);
     }
 

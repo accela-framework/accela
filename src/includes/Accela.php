@@ -99,7 +99,7 @@ class Accela {
       return;
     }
 
-    $routes = el($this->routes, el($_SERVER, "REQUEST_METHOD", "GET"));
+    $routes = $this->routes[$_SERVER["REQUEST_METHOD"] ?? "GET"] ?? [];
     foreach($routes as $_path => $callback){
       if($path === $_path){
         $callback();
@@ -185,7 +185,7 @@ class Accela {
     $interval = $this->serverLoadInterval;
     if($interval) $now = $now - ($now % $interval);
 
-    return el($_GET, "__t", "{$now}");
+    return $_GET["__t"] ?? "{$now}";
   }
 
   public function setData(string $key, mixed $value): void {

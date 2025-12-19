@@ -11,7 +11,7 @@ class PageProps {
   ){}
 
   public function get(string $path, $query=null): mixed {
-    if(!el($this->props, $path)) return [];
+    if(!isset($this->props[$path])) return [];
     return $query ? call_user_func_array($this->props[$path], [$query]) : call_user_func($this->props[$path]);
   }
 

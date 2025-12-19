@@ -6,12 +6,12 @@ class Hook {
   public $hooks = [];
 
   public function add(string $name, callable $callback): void {
-    if(el($this->hooks, $name)) $hooks[$name] = [];
+    if($this->hooks[$name] ?? null) $hooks[$name] = [];
     $this->hooks[$name][] = $callback;
   }
 
   public function get($name): array {
-    return el($this->hooks, $name, []);
+    return $this->hooks[$name] ?? [];
   }
 
   public function exec($name, ...$args){
