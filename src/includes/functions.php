@@ -20,6 +20,9 @@ namespace Accela {
    */
   function createDom(string $html): \DOMDocument
   {
+    // @ 属性を一時的にエスケープ（DOMDocument が削除するのを防ぐ）
+    $html = preg_replace('/ @([a-zA-Z])/', ' data-accela-dynamic-$1', $html);
+
     $doc = new \DOMDocument();
     libxml_use_internal_errors(true);
     $doc->loadHTML('<meta charset="UTF-8"><div id="accela-root">' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
@@ -77,6 +80,10 @@ namespace Accela {
     foreach ($root->childNodes as $child) {
       $html .= $doc->saveHTML($child);
     }
+
+    // エスケープした @ 属性を戻す
+    $html = preg_replace('/ data-accela-dynamic-([a-zA-Z])/', ' @$1', $html);
+
     return $html;
   }
 
