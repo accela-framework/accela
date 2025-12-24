@@ -55,7 +55,7 @@ class Page {
     $this->path = $path;
     $this->head = preg_replace("@^.*<head>[\s\t\n]*(.+?)[\s\t\n]*</head>.*$@s", '$1', $content);
     $this->head = preg_replace("@[ \t]+<@", "<", $this->head);
-    $this->meta = preg_replace("@^.*<accela-meta>[\s\t\n]*(.+?)[\s\t\n]*</accela-meta>.*$@s", '$1', $content);
+    $this->meta = preg_replace("@^.*<(?:accela-meta|a-meta)>[\s\t\n]*(.+?)[\s\t\n]*</(?:accela-meta|a-meta)>.*$@s", '$1', $content);
     $this->body = preg_replace("@^.*<body>[\s\t\n]*(.+?)[\s\t\n]*</body>.*$@s", '$1', $content);
 
     // get PageProps
@@ -87,7 +87,7 @@ class Page {
   }
 
   public function evaluateServerComponent(string $html, array $page_props): string {
-    preg_match_all('@(<accela-server-component\s+(.+?)>(.*?)</accela-server-component>)@ms', $html, $m);
+    preg_match_all('@(<(?:accela-server-component|a-sc)\s+(.+?)>(.*?)</(?:accela-server-component|a-sc)>)@ms', $html, $m);
     foreach($m[1] as $i => $tag){
       $props_string = $m[2][$i];
       preg_match_all('/(@?[a-z0-9\-_]+)="(.+?)"/m', $props_string, $m2);
