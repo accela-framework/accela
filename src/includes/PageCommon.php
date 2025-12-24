@@ -11,19 +11,23 @@ class PageCommon extends Page {
 
   public function initialize(string $path, string $content, string|null $staticPath=null): void {
     $this->path = $path;
-    $this->head = preg_replace("@^.*<head>[\s\t\n]*(.+?)[\s\t\n]*</head>.*$@s", '$1', $content);
-    $this->head = preg_replace("@[ \t]+<@", "<", $this->head);
+
+    $head = preg_replace("@^.*<head>[\s\t\n]*(.+?)[\s\t\n]*</head>.*$@s", '$1', $content);
+    $head = preg_replace("@[ \t]+<@", "<", $head);
 
     $this->style = "";
     if(preg_match("@<style>.+?</style>@s", $content)){
       $this->style = preg_replace("@^.*<style>[\s\t\n]*(.+?)[\s\t\n]*</style>.*$@s", '$1', $content);
     }
 
-    $this->body = "";
-
     $this->props = $this->accela->pageProps->get($path);
 
-    $this->head = $this->evaluateServerComponent($this->head, $this->props);
+    $head = $this->evaluateServerComponent($head, $this->props);
+
+    // create DOM
+    $this->headDom = createDom($head);
+    $this->metaDom = createDom('');
+    $this->bodyDom = createDom('');
   }
 
   public function getCss(){

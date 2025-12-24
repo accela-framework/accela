@@ -12,7 +12,7 @@ class OutputGenerator {
     $style = '<style class="accela-css">' . $pageCommon->getCss() . '</style>';
     $separator = '<meta name="accela-separator">';
 
-    $head = implode("\n", [$pageCommon->head, $style, $separator, $page->head]);
+    $head = implode("\n", [$pageCommon->getHead(), $style, $separator, $page->getHead()]);
     return $this->fixHeadNode($head);
   }
 
@@ -20,8 +20,8 @@ class OutputGenerator {
     return [
       "entrancePage" => [
         "path" => $page->path,
-        "head" => $page->head,
-        "content" => $page->body,
+        "head" => $page->getHead(),
+        "content" => $page->getBody(),
         "props" => $page->props
       ],
       "globalProps" => $this->accela->pageProps->globalProps,

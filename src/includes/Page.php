@@ -6,8 +6,8 @@ class PageNotFoundError extends \Exception {}
 
 class Page {
   protected Accela $accela;
-  public string $path, $head, $meta, $body;
-  public \DOMDocument $metaDom;
+  public string $path;
+  public \DOMDocument $headDom, $metaDom, $bodyDom;
   public array $props;
   public bool $isDynamic;
   public string | null $staticPath = null;
@@ -53,10 +53,12 @@ class Page {
 
   public function initialize(string $path, string $content, string|null $staticPath=null): void {
     $this->path = $path;
-    $this->head = preg_replace("@^.*<head>[\s\t\n]*(.+?)[\s\t\n]*</head>.*$@s", '$1', $content);
-    $this->head = preg_replace("@[ \t]+<@", "<", $this->head);
-    $this->meta = preg_replace("@^.*<(?:accela-meta|a-meta)>[\s\t\n]*(.+?)[\s\t\n]*</(?:accela-meta|a-meta)>.*$@s", '$1', $content);
-    $this->body = preg_replace("@^.*<body>[\s\t\n]*(.+?)[\s\t\n]*</body>.*$@s", '$1', $content);
+
+    // extract sections
+    $head = preg_replace("@^.*<head>[\s\t\n]*(.+?)[\s\t\n]*</head>.*$@s", '$1', $content);
+    $head = preg_replace("@[ \t]+<@", "<", $head);
+    $meta = preg_replace("@^.*<(?:accela-meta|a-meta)>[\s\t\n]*(.+?)[\s\t\n]*</(?:accela-meta|a-meta)>.*$@s", '$1', $content);
+    $body = preg_replace("@^.*<body>[\s\t\n]*(.+?)[\s\t\n]*</body>.*$@s", '$1', $content);
 
     // get PageProps
     if($staticPath){
@@ -76,14 +78,42 @@ class Page {
     }
 
     // eval ServerComponent
-    $this->head = $this->evaluateServerComponent($this->head, $this->props);
-    $this->meta = $this->evaluateServerComponent($this->meta, $this->props);
-    $this->body = $this->evaluateServerComponent($this->body, $this->props);
+    $head = $this->evaluateServerComponent($head, $this->props);
+    $meta = $this->evaluateServerComponent($meta, $this->props);
+    $body = $this->evaluateServerComponent($body, $this->props);
 
-    $this->metaDom = new \DOMDocument();
-    libxml_use_internal_errors(true);
-    $this->metaDom->loadHTML("<html><body>{$this->meta}</body></html>");
-    libxml_clear_errors();
+    // create DOM and convert :attr syntax
+    $this->headDom = createDom($head);
+    $this->metaDom = createDom($meta);
+    $this->bodyDom = createDom($body);
+  }
+
+  /**
+   * Get innerHTML of DOM
+   */
+  public function getHtml(\DOMDocument $dom): string {
+    return getHtmlFromDom($dom);
+  }
+
+  /**
+   * Get head HTML
+   */
+  public function getHead(): string {
+    return $this->getHtml($this->headDom);
+  }
+
+  /**
+   * Get meta HTML
+   */
+  public function getMeta(): string {
+    return $this->getHtml($this->metaDom);
+  }
+
+  /**
+   * Get body HTML
+   */
+  public function getBody(): string {
+    return $this->getHtml($this->bodyDom);
   }
 
   public function evaluateServerComponent(string $html, array $page_props): string {

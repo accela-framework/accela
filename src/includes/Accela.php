@@ -70,8 +70,8 @@ class Accela {
       $pages = array_map(function($page){
         return [
           "path" => $page->path,
-          "head" => $page->head,
-          "content" => $page->body,
+          "head" => $page->getHead(),
+          "content" => $page->getBody(),
           "props" => $page->props
         ];
       }, $this->pageManager->all());

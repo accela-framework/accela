@@ -14,6 +14,7 @@ class Component {
   public function load(string $filePath){
     $content = file_get_contents($filePath);
     $content = preg_replace("/^[\\s\\t]+/mu", "", $content);
-    $this->content = preg_replace("/\\n+/mu", "\n", $content);
+    $content = preg_replace("/\\n+/mu", "\n", $content);
+    $this->content = convertBindSyntax($content);
   }
 }
