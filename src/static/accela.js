@@ -343,7 +343,7 @@ const applyFor = (content, props, components = null, pageProps = null) => {
     const templateHTML = getTemplateInnerHTML(el);
     const fragment = document.createDocumentFragment();
 
-    items.forEach((item, index) => {
+    Object.entries(items).forEach(([index, item]) => {
       const div = document.createElement("div");
       div.innerHTML = templateHTML;
 
