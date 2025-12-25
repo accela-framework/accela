@@ -1,13 +1,11 @@
 <?php
 
 namespace Accela {
-  function isDynamicPath(string $path): bool
-  {
+  function isDynamicPath(string $path): bool {
     return !!preg_match("@\\[.+?\\]@", $path);
   }
 
-  function capture(callable $callback): string
-  {
+  function capture(callable $callback): string {
     ob_start();
     $callback();
     $output = ob_get_contents();
@@ -15,11 +13,14 @@ namespace Accela {
     return $output ?: "";
   }
 
+  function env(string $key, mixed $default = null): mixed {
+    return Env::get($key, $default);
+  }
+
   /**
    * Create DOMDocument and convert :attr="value" syntax to data-bind format
    */
-  function createDom(string $html): \DOMDocument
-  {
+  function createDom(string $html): \DOMDocument {
     // @ 属性を一時的にエスケープ（DOMDocument が削除するのを防ぐ）
     $html = preg_replace('/ @([a-zA-Z])/', ' data-accela-dynamic-$1', $html);
 
@@ -69,8 +70,7 @@ namespace Accela {
   /**
    * Get innerHTML from DOMDocument created by createDom()
    */
-  function getHtmlFromDom(\DOMDocument $doc): string
-  {
+  function getHtmlFromDom(\DOMDocument $doc): string {
     $root = $doc->getElementById('accela-root');
     if (!$root) {
       return '';
@@ -90,8 +90,7 @@ namespace Accela {
   /**
    * Convert :attr="value" syntax to data-bind format (returns string)
    */
-  function convertBindSyntax(string $html): string
-  {
+  function convertBindSyntax(string $html): string {
     return getHtmlFromDom(createDom($html));
   }
 }
