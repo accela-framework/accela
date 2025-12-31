@@ -343,7 +343,7 @@ const applyFor = (content, props, components = null, pageProps = null) => {
     const templateHTML = getTemplateInnerHTML(el);
     const fragment = document.createDocumentFragment();
 
-    Object.entries(items).forEach(([index, item]) => {
+    items.forEach((item, index) => {
       const div = document.createElement("div");
       div.innerHTML = templateHTML;
 
@@ -378,14 +378,30 @@ const applyComponents = (content, components, _props = {}, _pageProps = null, de
   const pageProps = _pageProps ?? _props;
 
   if (isComponentElement(content)) {
+    // コンポーネント名を取得（@use 対応）
+    let componentName = getComponentName(content);
+    const dynamicUse = content.getAttribute("@use");
+    if (dynamicUse) {
+      componentName = getValue(_props, dynamicUse) || getValue(ACCELA.globalProps || {}, dynamicUse);
+      if (!componentName) {
+        console.warn(`@use="${dynamicUse}" resolved to empty`);
+        return;
+      }
+    }
+
+    const component = components[componentName];
+    if (!component) {
+      throw new ComponentNotFoundError(componentName);
+    }
+
     const props = {};
 
     // props を収集（型変換付き）
     content.getAttributeNames().forEach(propName => {
       const propValue = content.getAttribute(propName);
       
-      // template 用の属性はスキップ
-      if (propName === "a-c") return;
+      // template 用の属性と @use はスキップ
+      if (propName === "a-c" || propName === "@use") return;
       
       if (propName[0] === "@") {
         const key = propName.slice(1);
@@ -403,12 +419,6 @@ const applyComponents = (content, components, _props = {}, _pageProps = null, de
         props[propName] = v;
       }
     });
-
-    const componentName = getComponentName(content);
-    const component = components[componentName];
-    if (!component) {
-      throw new ComponentNotFoundError(componentName);
-    }
 
     const componentObject = component.object.cloneNode(true);
 
