@@ -14,8 +14,12 @@ class API {
         return true;
       }
 
-      $pathRegexp = preg_replace('/(\[.+?\])/', '(.+?)', $_path);
-      if(preg_match("@{$pathRegexp}@", $path, $matches)){
+      // Catch-all routes: [...slug] → (.+)
+      // Regular dynamic segments: [name] → ([^/]+?)
+      $pathRegexp = preg_replace('/\[\.\.\.(.+?)\]/', '(.+)', $_path);
+      $pathRegexp = preg_replace('/(\[.+?\])/', '([^/]+?)', $pathRegexp);
+
+      if(preg_match("@^{$pathRegexp}$@", $path, $matches)){
         $this->responseHeader($path);
         $callback(API::buildQuery($_path, $matches));
         return true;
@@ -28,9 +32,18 @@ class API {
   public function buildQuery(string $path, array $matches): array {
     $query = [];
 
-    preg_match_all('@\[([a-z]+)\]@', $path, $m);
-    foreach($m[1] as $i => $key){
-      $query[$key] = $matches[$i+1];
+    // Extract parameter names including catch-all detection
+    preg_match_all('@\[(\.\.\.)?([a-z]+)\]@', $path, $m);
+    foreach($m[2] as $i => $key){
+      $isCatchAll = !empty($m[1][$i]); // Check if it's a catch-all route
+      $value = $matches[$i+1] ?? null;
+
+      if($isCatchAll && $value !== null){
+        // Split catch-all parameter into array
+        $query[$key] = array_values(array_filter(explode('/', $value)));
+      }else{
+        $query[$key] = $value;
+      }
     }
 
     return $query;
@@ -67,7 +80,7 @@ class API {
   }
 
   public function register(string $path, callable $callback): void {
-    if(!preg_match('@^[/.a-z0-9\-_\[\]]+$@', $path)) return;
+    if(!preg_match('@^[/.a-z0-9\-_\[\]\.]+$@', $path)) return;
     $this->map[$path] = $callback;
   }
 

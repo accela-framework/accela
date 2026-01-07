@@ -88,17 +88,31 @@ class PageManager {
     if(!isset($memo[$staticPath])){
       $memo[$staticPath] = null;
 
+      $candidates = [];
+
       foreach($this->getAllTemplatePaths() as $path){
         if(strpos($path, "[") !== false){
-          $re = preg_replace("@(\\[.+?\\])@s", "[^/]+?", $path);
-          if(preg_match("@{$re}@", $path)){
+          // Catch-all routes: [...slug] → .+
+          // Regular dynamic segments: [name] → [^/]+?
+          $re = preg_replace("@\\[\\.\\.\\.(.+?)\\]@s", "(.+)", $path);
+          $re = preg_replace("@(\\[.+?\\])@s", "([^/]+?)", $re);
+
+          if(preg_match("@^{$re}$@", $staticPath)){
             $staticPaths = $this->accela->pagePaths->get($path);
             if(in_array($staticPath, $staticPaths)){
-              $memo[$staticPath] = $path;
-              return $path;
+              // Calculate specificity (lower = more specific)
+              // Catch-all segments count as 1000, regular segments as 1
+              $specificity = substr_count($path, '[...') * 1000 + substr_count($path, '[');
+              $candidates[] = ['path' => $path, 'specificity' => $specificity];
             }
           }
         }
+      }
+
+      // Sort by specificity (most specific first)
+      if(!empty($candidates)){
+        usort($candidates, fn($a, $b) => $a['specificity'] <=> $b['specificity']);
+        $memo[$staticPath] = $candidates[0]['path'];
       }
     }
 

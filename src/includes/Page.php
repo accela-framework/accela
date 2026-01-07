@@ -62,14 +62,28 @@ class Page {
 
     // get PageProps
     if($staticPath){
-      preg_match_all("@\\[(.+?)\\]@", $path, $m_keys);
+      // Extract parameter names from path pattern
+      preg_match_all("@\\[(\\.\\.\\.)?(.+?)\\]@", $path, $m_keys);
 
-      $path_re = preg_replace("@(\\[.+?\\])@", "([^/]+?)", $path);
-      preg_match("@{$path_re}$@", $staticPath, $m_vals);
+      // Build regex pattern for matching
+      // Catch-all: [...slug] → (.+)
+      // Regular: [name] → ([^/]+?)
+      $path_re = preg_replace("@\\[\\.\\.\\.(.+?)\\]@", "(.+)", $path);
+      $path_re = preg_replace("@(\\[.+?\\])@", "([^/]+?)", $path_re);
+
+      preg_match("@^{$path_re}$@", $staticPath, $m_vals);
 
       $query = [];
-      foreach($m_keys[1] as $i => $key){
-        $query[$key] = $m_vals[$i+1];
+      foreach($m_keys[2] as $i => $key){
+        $isCatchAll = !empty($m_keys[1][$i]); // Check if it's a catch-all route
+        $value = $m_vals[$i+1] ?? null;
+
+        if($isCatchAll && $value !== null){
+          // Split catch-all parameter into array
+          $query[$key] = array_values(array_filter(explode('/', $value)));
+        }else{
+          $query[$key] = $value;
+        }
       }
       $this->props = $this->accela->pageProps->get($path, $query);
 
