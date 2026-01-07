@@ -15,6 +15,8 @@ const SEL = {
   SLOT: "a-slot, template[a-slot]"
 };
 
+const MAX_COMPONENT_DEPTH = 1000;
+
 // 属性値を取得するヘルパー
 const getIfCond = (el) => el.getAttribute("a-if");
 const getForExpr = (el) => el.getAttribute("a-for");
@@ -199,16 +201,16 @@ const viewError = (error) => {
 // ドット記法でネストした値を取得（ホワイトリスト付き）
 const getValue = (obj, path) => {
   if (!obj || !path) return undefined;
-  
+
   const builtinWhitelist = ["length"];
-  
+
   return path.split(".").reduce((o, k) => {
     if (o == null) return undefined;
-    
+
     if (Object.hasOwn(o, k) || builtinWhitelist.includes(k)) {
       return o[k];
     }
-    
+
     return undefined;
   }, obj);
 };
@@ -226,41 +228,63 @@ const resolveValue = (props, path) => {
  * Binding
  * ================================================== */
 
-const bindProps = (content, props) => {
+// propsを要素にバインド（再帰的、バインド後に属性を削除）
+const bindProps = (element, props) => {
   if (typeof props === "undefined") {
     throw new Error("props is undefined");
   }
 
-  // data-bind (属性)
-  content.querySelectorAll("[data-bind]").forEach(o => {
-    o.getAttribute("data-bind").split(",").forEach(function(set) {
+  // data-bind
+  if (element.hasAttribute("data-bind")) {
+    const bindAttr = element.getAttribute("data-bind");
+    element.removeAttribute("data-bind");
+
+    bindAttr.split(",").forEach(set => {
       let [prop, variable] = set.split(":");
       if (!variable) variable = prop;
 
       const val = resolveValue(props, variable);
       if (typeof val !== "undefined") {
-        o.setAttribute(prop, typeof val === "string" ? val : JSON.stringify(val));
+        element.setAttribute(prop, typeof val === "string" ? val : JSON.stringify(val));
       }
     });
-  });
+  }
 
   // data-bind-html
-  content.querySelectorAll("[data-bind-html]").forEach(o => {
-    const variable = o.getAttribute("data-bind-html");
+  if (element.hasAttribute("data-bind-html")) {
+    const variable = element.getAttribute("data-bind-html");
+    element.removeAttribute("data-bind-html");
+
     const html = resolveValue(props, variable);
     if (typeof html !== "undefined") {
-      o.innerHTML = html;
+      element.innerHTML = html;
     }
-  });
+  }
 
   // data-bind-text
-  content.querySelectorAll("[data-bind-text]").forEach(o => {
-    const variable = o.getAttribute("data-bind-text");
+  if (element.hasAttribute("data-bind-text")) {
+    const variable = element.getAttribute("data-bind-text");
+    element.removeAttribute("data-bind-text");
+
     const text = resolveValue(props, variable);
     if (typeof text !== "undefined") {
-      o.textContent = text;
+      element.textContent = text;
     }
-  });
+  }
+
+  // 子要素を再帰的に処理
+  if (element.children) {
+    Array.from(element.children).forEach(child => {
+      // template[a-for]とa-cは新しいスコープなのでスキップ
+      if (child.tagName === 'TEMPLATE' && child.hasAttribute('a-for')) {
+        return;
+      }
+      if (isComponentElement(child)) {
+        return;
+      }
+      bindProps(child, props);
+    });
+  }
 };
 
 /* ==================================================
@@ -306,12 +330,36 @@ const evalCond = (expr, props) => {
   return !!resolveValue(props, expr);
 };
 
-// if を処理（template[a-if] のみ）
+// 統一処理関数: if → for → component の順で実行（bindはしない）
+const processContent = (content, props, components = null, slotProps = null, depth = 0) => {
+  if (depth >= MAX_COMPONENT_DEPTH) throw new Error("Maximum recursion depth exceeded");
+
+  // 1. if/for を処理
+  applyIf(content, props);
+  applyFor(content, props, components, slotProps, depth);
+
+  // 2. コンポーネントを展開
+  if (components) {
+    const expandComponents = (el) => {
+      const children = Array.from(el.children);
+      for (const child of children) {
+        if (isComponentElement(child)) {
+          applyComponents(child, components, props, slotProps || props, depth);
+        } else {
+          expandComponents(child);
+        }
+      }
+    };
+    expandComponents(content);
+  }
+};
+
+// a-if
 const applyIf = (content, props) => {
   let el;
   while ((el = content.querySelector(SEL.IF))) {
     const cond = getIfCond(el);
-    
+
     if (evalCond(cond, props)) {
       const fragment = document.createDocumentFragment();
       fragment.append(...el.content.cloneNode(true).childNodes);
@@ -322,9 +370,8 @@ const applyIf = (content, props) => {
   }
 };
 
-// for を処理（template[a-for] のみ）
-// components と pageProps を受け取る
-const applyFor = (content, props, components = null, pageProps = null) => {
+// a-for
+const applyFor = (content, props, components = null, slotProps = null, depth = 0) => {
   let el;
   while ((el = content.querySelector(SEL.FOR))) {
     const forAttr = getForExpr(el);
@@ -344,21 +391,13 @@ const applyFor = (content, props, components = null, pageProps = null) => {
     const fragment = document.createDocumentFragment();
 
     Object.entries(items).forEach(([index, item]) => {
-      const div = document.createElement("div");
-      div.innerHTML = templateHTML;
-
       const loopProps = { ...props, [itemName]: item };
       if (indexName) loopProps[indexName] = index;
 
-      // コンポーネントを展開（components が渡されている場合）
-      if (components) {
-        div.querySelectorAll(":scope > *").forEach(child => {
-          applyComponents(child, components, loopProps, pageProps || props);
-        });
-      }
+      const div = document.createElement("div");
+      div.innerHTML = templateHTML;
 
-      applyIf(div, loopProps);
-      applyFor(div, loopProps, components, pageProps);
+      processContent(div, loopProps, components, slotProps, depth);
       bindProps(div, loopProps);
 
       fragment.append(...div.childNodes);
@@ -372,17 +411,15 @@ const applyFor = (content, props, components = null, pageProps = null) => {
  * Components
  * ================================================== */
 
-const applyComponents = (content, components, _props = {}, _pageProps = null, depth = 1) => {
-  if (depth > 1000) throw new Error("Maximum component depth exceeded");
-
-  const pageProps = _pageProps ?? _props;
+const applyComponents = (content, components, props = {}, slotProps = null, depth = 0) => {
+  const effectiveSlotProps = slotProps ?? props;
 
   if (isComponentElement(content)) {
     // コンポーネント名を取得（@use 対応）
     let componentName = getComponentName(content);
     const dynamicUse = content.getAttribute("@use");
     if (dynamicUse) {
-      componentName = getValue(_props, dynamicUse) || getValue(ACCELA.globalProps || {}, dynamicUse);
+      componentName = getValue(props, dynamicUse) || getValue(ACCELA.globalProps || {}, dynamicUse);
       if (!componentName) {
         console.warn(`@use="${dynamicUse}" resolved to empty`);
         return;
@@ -394,21 +431,23 @@ const applyComponents = (content, components, _props = {}, _pageProps = null, de
       throw new ComponentNotFoundError(componentName);
     }
 
-    const props = {};
+    const componentProps = {};
 
     // props を収集（型変換付き）
     content.getAttributeNames().forEach(propName => {
       const propValue = content.getAttribute(propName);
-      
+
       // template 用の属性と @use はスキップ
       if (propName === "a-c" || propName === "@use") return;
-      
+
       if (propName[0] === "@") {
         const key = propName.slice(1);
-        if (propValue in _props) {
-          props[key] = _props[propValue];
+        // ドット記法に対応するため resolveValue を使用
+        const resolved = resolveValue(props, propValue);
+        if (typeof resolved !== "undefined") {
+          componentProps[key] = resolved;
         } else if (propValue in (ACCELA.globalProps || {})) {
-          props[key] = ACCELA.globalProps[propValue];
+          componentProps[key] = ACCELA.globalProps[propValue];
         }
       } else if (propName !== "use") {
         // 静的 props は型変換
@@ -416,7 +455,7 @@ const applyComponents = (content, components, _props = {}, _pageProps = null, de
         if (v === "true") v = true;
         else if (v === "false") v = false;
         else if (/^-?\d+(\.\d+)?$/.test(v)) v = Number(v);
-        props[propName] = v;
+        componentProps[propName] = v;
       }
     });
 
@@ -445,13 +484,9 @@ const applyComponents = (content, components, _props = {}, _pageProps = null, de
       const slotName = slotTarget.getAttribute("data-slot") || "default";
       if (slotContents[slotName]) {
         slotTarget.innerHTML = slotContents[slotName];
-        // slot 内は pageProps で処理
-        applyIf(slotTarget, pageProps);
-        applyFor(slotTarget, pageProps, components, pageProps);
-        slotTarget.querySelectorAll(":scope > *").forEach(child => {
-          applyComponents(child, components, pageProps, pageProps, depth + 1);
-        });
-        bindProps(slotTarget, pageProps);
+        // slot 内は effectiveSlotProps で processContent を使用
+        processContent(slotTarget, effectiveSlotProps, components, effectiveSlotProps, depth + 1);
+        bindProps(slotTarget, effectiveSlotProps);
       }
     });
 
@@ -459,28 +494,21 @@ const applyComponents = (content, components, _props = {}, _pageProps = null, de
     componentObject.querySelectorAll(`[data-contents="${componentName}"]`).forEach(_o => {
       const defaultContent = slotContents["default"] || "";
       _o.innerHTML = defaultContent;
-      // data-contents 内は pageProps で処理
-      applyIf(_o, pageProps);
-      applyFor(_o, pageProps, components, pageProps);
-      _o.querySelectorAll(":scope > *").forEach(child => {
-        applyComponents(child, components, pageProps, pageProps, depth + 1);
-      });
-      bindProps(_o, pageProps);
+      // data-contents 内は effectiveSlotProps で processContent を使用
+      processContent(_o, effectiveSlotProps, components, effectiveSlotProps, depth + 1);
+      bindProps(_o, effectiveSlotProps);
     });
 
-    // コンポーネントテンプレート部分
-    componentObject.querySelectorAll(":scope > *").forEach(_o => {
-      if (!_o.hasAttribute("data-contents") && !_o.hasAttribute("data-slot")) {
-        applyComponents(_o, components, props, pageProps, depth + 1);
+    // コンポーネント本体を processContent で処理
+    // data-contents と data-slot は既に処理済みなのでスキップ
+    const children = Array.from(componentObject.children);
+    for (const child of children) {
+      if (child.hasAttribute("data-contents") || child.hasAttribute("data-slot")) {
+        continue;
       }
-    });
-
-    // コンポーネント内の if/for を処理（コンポーネント自身の props で）
-    applyIf(componentObject, props);
-    applyFor(componentObject, props, components, pageProps);
-
-    // コンポーネント内をバインド
-    bindProps(componentObject, props);
+      processContent(child, componentProps, components, effectiveSlotProps, depth + 1);
+      bindProps(child, componentProps);
+    }
 
     // 置換
     const firstChild = componentObject.firstElementChild;
@@ -492,7 +520,7 @@ const applyComponents = (content, components, _props = {}, _pageProps = null, de
 
   } else {
     content.querySelectorAll(":scope > *").forEach(_o => {
-      applyComponents(_o, components, _props, pageProps, depth + 1);
+      applyComponents(_o, components, props, effectiveSlotProps, depth + 1);
     });
   }
 };
@@ -501,8 +529,8 @@ const applyComponents = (content, components, _props = {}, _pageProps = null, de
  * Modules
  * ================================================== */
 
-const applyModules = (contents, depth = 1) => {
-  if (depth > 1000) throw new Error("Maximum module depth exceeded");
+const applyModules = (contents, depth = 0) => {
+  if (depth >= MAX_COMPONENT_DEPTH) throw new Error("Maximum nesting depth exceeded");
 
   contents.querySelectorAll(":scope > *").forEach(o => {
     applyModules(o, depth + 1);
@@ -566,9 +594,7 @@ class PageContent {
   }
 
   applyComponents(components) {
-    applyComponents(this.object, components, this.props);
-    applyIf(this.object, this.props);
-    applyFor(this.object, this.props, components, this.props);
+    processContent(this.object, this.props, components, this.props);
     bindProps(this.object, this.props);
   }
 }
