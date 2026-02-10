@@ -46,8 +46,8 @@ class StaticSiteGenerator {
     }
 
     foreach($this->accela->api->getAllPaths() as $path){
-      $filePath = "{$outputDir}/api/{$path}";
-      $this->getPage("/api/{$path}", $filePath);
+      $filePath = "{$outputDir}/{$path}";
+      $this->getPage($path, $filePath);
     }
 
     foreach($this->accela->ssgRoutes as $path){
