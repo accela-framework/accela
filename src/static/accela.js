@@ -737,7 +737,7 @@ const start = async function() {
     if (url.hostname !== location.hostname || !site[path]) return true;
 
     e.preventDefault();
-    if (path === location.pathname) {
+    if (path === location.pathname && url.search === location.search) {
       ACCELA.changeHash ? ACCELA.changeHash(url.hash) : (() => location.hash = url.hash)();
       return false;
     }
