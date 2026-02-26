@@ -88,13 +88,13 @@ class Accela {
       }
 
       echo file_get_contents(__DIR__ . "/../static/modules.js");
-      echo file_get_contents($this->appDir . "/script.js");
       foreach($this->plugins as $pluginName => $args){
         if(isset(self::$pluginPaths[$pluginName])){
           $scriptPath = rtrim(self::$pluginPaths[$pluginName], "/") . "/script.js";
           if(file_exists($scriptPath)) echo file_get_contents($scriptPath);
         }
       }
+      echo file_get_contents($this->appDir . "/script.js");
       echo file_get_contents(__DIR__ . "/../static/accela.js");
       return;
     }
