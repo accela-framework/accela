@@ -27,7 +27,7 @@ class StaticSiteGenerator {
     }
 
     foreach($includeFiles as $includeFile){
-      if(file_exists($includeFile)){
+      if(file_exists("{$indexDir}/{$includeFile}")){
         shell_exec("cp -r \"{$indexDir}/{$includeFile}\" \"{$outputDir}/{$includeFile}\"");
       }
     }
